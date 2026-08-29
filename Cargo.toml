@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Wenju Guo"]
+
+[workspace.dependencies]
+nwm-common = { path = "crates/common"}
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+strip = true
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "unwind"

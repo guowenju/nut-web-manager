@@ -1,0 +1,74 @@
+name: Publish Docker Image
+
+run-name: "nut-web-manager image ${{ inputs.version }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Docker image version
+        required: true
+        default: 0.1.0
+        type: string
+      tag_latest:
+        description: Also publish the latest tag
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-image-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build image
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          TAG_LATEST: ${{ inputs.tag_latest }}
+        run: ./build-image.sh "$RELEASE_VERSION"
+
+      - name: Smoke test image
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          container_id=$(docker run --rm --detach --publish 127.0.0.1:8080:8080 "guowenju/nut-web-manager:${RELEASE_VERSION}")
+          trap 'docker stop --time 10 "$container_id" >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/api/v1/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs "$container_id"
+          exit 1
+
+      - name: Push version tag
+        run: docker push "guowenju/nut-web-manager:${{ inputs.version }}"
+
+      - name: Push latest tag
+        if: ${{ inputs.tag_latest }}
+        run: docker push guowenju/nut-web-manager:latest
+
+      - name: Sync Docker Hub README
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: guowenju/nut-web-manager
+          readme-filepath: README.md

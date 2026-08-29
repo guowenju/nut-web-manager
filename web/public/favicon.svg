@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <title>NUT Web Manager</title>
+  <rect x="1" y="1" width="46" height="46" rx="13" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="2"/>
+  <rect x="13" y="13" width="21" height="15" rx="3" fill="#fff" stroke="#059669" stroke-width="2.5"/>
+  <path d="M34 18h3v5h-3M18 34h12M24 28v6" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="19" cy="20.5" r="2" fill="#10b981"/>
+  <path d="M24 20.5h5" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

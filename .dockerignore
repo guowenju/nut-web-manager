@@ -1,0 +1,16 @@
+.git
+.github
+.cargo
+.env
+data
+release
+target
+ups-config-records
+web/dist
+web/node_modules
+*.db
+*.db-shm
+*.db-wal
+Dockerfile*
+README.md
+ARCHITECTURE_V1.md
