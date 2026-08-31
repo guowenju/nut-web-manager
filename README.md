@@ -17,6 +17,10 @@ NWM 只负责管理配置，不参与实时掉电决策。配置完成后，即�
 
 > 当前只在`山特 TG-BOX 850`测试和使用
 
+## 项目预览
+
+![项目预览](https://raw.githubusercontent.com/guowenju/nut-web-manager/main/docs/images/preview.png)
+
 ## 工作方式
 
 ```text
