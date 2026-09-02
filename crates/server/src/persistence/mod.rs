@@ -1,10 +1,16 @@
+mod dashboard_history_repository;
 mod host_repository;
+mod monitor_repository;
 mod operation_repository;
 mod topology_repository;
 
 use std::{str::FromStr, time::Duration};
 
+pub use dashboard_history_repository::{DashboardHistoryRepository, DashboardHistorySample};
 pub use host_repository::{CreateHost, HostRepository};
+pub use monitor_repository::{
+    MonitorDevice, MonitorEvent, MonitorRepository, MonitorSample, MonitorSnapshot, MonitorSource,
+};
 pub use operation_repository::OperationRepository;
 use sqlx::{
     SqlitePool,
@@ -62,6 +68,14 @@ impl Database {
 
     pub fn operations(&self) -> OperationRepository {
         OperationRepository::new(self.pool.clone())
+    }
+
+    pub fn monitor(&self) -> MonitorRepository {
+        MonitorRepository::new(self.pool.clone())
+    }
+
+    pub fn dashboard_history(&self) -> DashboardHistoryRepository {
+        DashboardHistoryRepository::new(self.pool.clone())
     }
 
     pub fn topology(&self) -> TopologyRepository {

@@ -200,6 +200,13 @@ export interface DashboardSnapshot {
   error: unknown | null
 }
 
+export interface DashboardHistorySample {
+  observed_at: string
+  load_percent: number | null
+  runtime_seconds: number | null
+  realpower_watts: number | null
+}
+
 export interface NutBindingRecord {
   id: string
   server_id: string
@@ -241,4 +248,84 @@ export interface ConfigPreview {
 export interface BindingConfigPreview {
   server: ConfigPreview
   client: ConfigPreview
+}
+
+export interface UpsMonitorSource {
+  id: string
+  name: string
+  address: string
+  port: number
+  enabled: boolean
+  last_discovery_at: string | null
+  last_error: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsMonitorDevice {
+  id: string
+  source_id: string
+  source_name: string
+  ups_name: string
+  description: string | null
+  online: boolean
+  last_seen_at: string | null
+  last_error: string | null
+  observed_at: string | null
+  status_flags: string[]
+  charge_percent: number | null
+  runtime_seconds: number | null
+  runtime_capped: boolean
+  load_percent: number | null
+  manufacturer: string | null
+  model: string | null
+}
+
+export interface UpsMonitorOverview {
+  sources: UpsMonitorSource[]
+  devices: UpsMonitorDevice[]
+  observed_at: string
+}
+
+export interface UpsMonitorSnapshot {
+  device: UpsMonitorDevice
+  raw: Record<string, string>
+  input_voltage: number | null
+  output_voltage: number | null
+  battery_temperature: number | null
+}
+
+export interface UpsMonitorSample {
+  observed_at: string
+  status_flags: string[]
+  charge_percent: number | null
+  runtime_seconds: number | null
+  runtime_capped: boolean
+  load_percent: number | null
+  input_voltage: number | null
+  output_voltage: number | null
+  battery_temperature: number | null
+}
+
+export interface UpsMonitorEvent {
+  id: number
+  occurred_at: string
+  kind: string
+  severity: 'info' | 'warning' | 'critical'
+  message: string
+  status_flags: string[]
+}
+
+export interface UpsMonitorSourceInput {
+  name: string
+  address: string
+  port: number
+  enabled: boolean
+  reset_devices?: boolean
+}
+
+export interface UpsMonitorConnectionTest {
+  reachable: boolean
+  devices: Array<{ name: string; description: string | null }>
+  error: string | null
 }

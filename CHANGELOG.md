@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/guowenju/nut-web-manager/releases/tag/v0.2.0) - 2026-09-02
+
+### Added
+
+- 新增独立的“UPS 监控”模块，通过只读 NUT TCP 协议接入多个标准 NUT Server，并自动发现各数据源下的 UPS。
+
 ## [0.1.0](https://github.com/guowenju/nut-web-manager/releases/tag/v0.1.0) - 2026-08-30
 
 ### Added

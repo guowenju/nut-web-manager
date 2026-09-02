@@ -37,6 +37,21 @@ select {
   font: inherit;
 }
 
+.field-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: white;
+  padding: 0.7rem 0.8rem;
+  color: #1e293b;
+  outline: none;
+}
+
+.field-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgb(16 185 129 / 0.1);
+}
+
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]) {
   cursor: pointer;

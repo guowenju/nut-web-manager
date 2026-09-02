@@ -1,6 +1,6 @@
 use axum::{
     Router, middleware,
-    routing::{get, post},
+    routing::{get, post, put},
 };
 
 use crate::{api, state::AppState};
@@ -14,6 +14,36 @@ pub fn router(state: AppState) -> Router {
         .route("/api/v1/auth/session", get(api::session))
         .route("/api/v1/auth/logout", post(api::logout))
         .route("/api/v1/dashboard", get(api::dashboard))
+        .route("/api/v1/dashboard/history", get(api::dashboard_history))
+        .route(
+            "/api/v1/ups-monitor/sources",
+            get(api::list_monitor_sources).post(api::create_monitor_source),
+        )
+        .route(
+            "/api/v1/ups-monitor/sources/{source_id}",
+            put(api::update_monitor_source).delete(api::delete_monitor_source),
+        )
+        .route(
+            "/api/v1/ups-monitor/sources/{source_id}/test",
+            post(api::test_monitor_source),
+        )
+        .route(
+            "/api/v1/ups-monitor/sources/{source_id}/discover",
+            post(api::discover_monitor_source),
+        )
+        .route("/api/v1/ups-monitor/overview", get(api::monitor_overview))
+        .route(
+            "/api/v1/ups-monitor/devices/{device_id}/snapshot",
+            get(api::monitor_snapshot),
+        )
+        .route(
+            "/api/v1/ups-monitor/devices/{device_id}/history",
+            get(api::monitor_history),
+        )
+        .route(
+            "/api/v1/ups-monitor/devices/{device_id}/events",
+            get(api::monitor_events),
+        )
         .route("/api/v1/ssh/public-key", get(api::ssh_public_key))
         .route("/api/v1/operations/{operation_id}", get(api::get_operation))
         .route("/api/v1/hosts", get(api::list_hosts).post(api::create_host))

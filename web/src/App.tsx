@@ -10,6 +10,9 @@ const DashboardPage = lazy(() =>
 const HostsPage = lazy(() =>
   import('./pages/HostsPage.tsx').then((module) => ({ default: module.HostsPage })),
 )
+const UpsMonitorPage = lazy(() =>
+  import('./pages/UpsMonitorPage.tsx').then((module) => ({ default: module.UpsMonitorPage })),
+)
 const LoginPage = lazy(() =>
   import('./pages/LoginPage.tsx').then((module) => ({ default: module.LoginPage })),
 )
@@ -53,6 +56,7 @@ export default function App() {
         <Route element={<SessionGate />}>
           <Route index element={<DashboardPage />} />
           <Route path="hosts" element={<HostsPage />} />
+          <Route path="ups-monitor" element={<UpsMonitorPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

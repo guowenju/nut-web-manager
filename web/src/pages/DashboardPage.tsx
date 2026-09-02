@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import {
   Activity,
   AlertTriangle,
@@ -9,15 +10,26 @@ import {
   PlugZap,
   Server,
 } from 'lucide-react'
-import { dashboardQueryKey, getDashboard, hostsQueryKey, listHosts } from '../lib/api.ts'
-import type { ProtectionHealth } from '../lib/types.ts'
+import { TimeSeriesChart, type TimeSeries } from '../components/TimeSeriesChart.tsx'
+import { dashboardQueryKey, getDashboard, getDashboardHistory, hostsQueryKey, listHosts } from '../lib/api.ts'
+import type { DashboardHistorySample, ProtectionHealth } from '../lib/types.ts'
+
+const historyRanges = ['24h', '7d', '30d', '90d'] as const
+type HistoryRange = typeof historyRanges[number]
 
 export function DashboardPage() {
+  const [historyRange, setHistoryRange] = useState<HistoryRange>('24h')
   const hosts = useQuery({ queryKey: hostsQueryKey, queryFn: listHosts })
   const dashboard = useQuery({
     queryKey: dashboardQueryKey,
     queryFn: getDashboard,
     refetchInterval: 5_000,
+    retry: 1,
+  })
+  const history = useQuery({
+    queryKey: [...dashboardQueryKey, 'history', historyRange],
+    queryFn: () => getDashboardHistory(historyRange),
+    refetchInterval: 60_000,
     retry: 1,
   })
   const serverCount = hosts.data?.filter((host) => host.role === 'server').length ?? 0
@@ -42,6 +54,7 @@ export function DashboardPage() {
           lowBattery={lowBattery}
           chargePercent={ups.charge_percent}
           runtimeSeconds={ups.runtime_seconds}
+          runtimeCapped={ups.raw['battery.runtime'] === '65535'}
           policy={shutdownTriggerPolicy(snapshot?.server)}
         />
       )}
@@ -77,7 +90,7 @@ export function DashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-base font-semibold text-slate-900">{[ups.manufacturer, ups.model].filter(Boolean).join(' ') || 'USB UPS'}</p>
-                  <p className="mt-1 text-xs text-slate-500">{powerLabel(ups.power_source)} · {snapshot?.server?.ups_name}@{snapshot?.server?.listen_address}:{snapshot?.server?.listen_port}</p>
+                  <p className="mt-1 text-xs text-slate-500">{powerLabel(ups.power_source)} · NUT Server {snapshot?.server?.listen_address}:{snapshot?.server?.listen_port}</p>
                 </div>
                 <div className="text-left sm:text-right">
                   <p className="text-3xl font-semibold tracking-tight text-emerald-600">{value(ups.charge_percent, '%')}</p>
@@ -86,8 +99,8 @@ export function DashboardPage() {
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <DataCard icon={Gauge} label="当前负载" value={value(ups.load_percent, '%')} />
-                <DataCard icon={Clock3} label="预计续航" value={runtime(ups.runtime_seconds)} />
-                <DataCard icon={PlugZap} label="UPS 估算输出功率" value={watts(ups.raw['ups.realpower'])} />
+                <DataCard icon={Clock3} label="预计续航" value={runtime(ups.runtime_seconds, ups.raw['battery.runtime'] === '65535')} />
+                <DataCard icon={PlugZap} label="实际输出功率" value={watts(ups.raw['ups.realpower'])} />
               </div>
               <div className={`mt-4 rounded-xl border p-4 text-xs leading-5 ${snapshot?.server && snapshot.server.apply_state !== 'applied' ? 'border-amber-300 bg-amber-50 font-semibold text-amber-800' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
                 <p>当前关机策略：{shutdownPolicy(snapshot?.server)}</p>
@@ -112,8 +125,55 @@ export function DashboardPage() {
           </div>
         </div>
       </section>
+
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 lg:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-800">运行趋势</h2>
+            <p className="mt-1 text-xs text-slate-500">每分钟记录一次，断开采集的时段不会连线。</p>
+          </div>
+          <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+            {historyRanges.map((range) => (
+              <button
+                key={range}
+                type="button"
+                onClick={() => setHistoryRange(range)}
+                className={`rounded-md px-3 py-1.5 text-xs transition ${historyRange === range ? 'bg-white font-medium text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
+        </div>
+        {history.isError && <p className="mt-4 text-xs text-rose-600">历史趋势读取失败，将自动重试。</p>}
+        <div className="mt-5 grid gap-4 xl:grid-cols-3">
+          <TimeSeriesChart title="负载" series={[dashboardSeries(history.data, 'load_percent', '负载', '#0891b2')]} unit="%" />
+          <TimeSeriesChart
+            title="预计续航"
+            series={[dashboardSeries(history.data, 'runtime_seconds', '续航', '#2563eb', (value) => value == null ? null : value / 60)]}
+            unit=" 分钟"
+            valueFormatter={(value) => runtime(Math.round(value * 60))}
+            emptyLabel="设备未提供可用的预计续航"
+          />
+          <TimeSeriesChart title="实际输出功率" series={[dashboardSeries(history.data, 'realpower_watts', '输出功率', '#7c3aed')]} unit=" W" emptyLabel="设备未提供实际输出功率" />
+        </div>
+      </section>
     </div>
   )
+}
+
+function dashboardSeries(
+  samples: DashboardHistorySample[] | undefined,
+  key: keyof DashboardHistorySample,
+  name: string,
+  color: string,
+  transform: (value: number | null) => number | null = (value) => value,
+): TimeSeries {
+  return {
+    name,
+    color,
+    points: (samples ?? []).map((sample) => [sample.observed_at, transform(sample[key] as number | null)]),
+  }
 }
 
 const tones = {
@@ -145,7 +205,7 @@ function EmptyState({ configured, loading }: { configured: boolean; loading: boo
   return <div className="mt-6 grid min-h-64 place-items-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 text-center"><div className="max-w-sm"><Network size={28} className="mx-auto text-slate-600" /><h3 className="mt-4 text-sm font-medium text-slate-700">{loading ? '正在读取 UPS 状态…' : configured ? '暂时无法读取 UPS 数据' : '尚未应用 NUT Server'}</h3><p className="mt-2 text-xs leading-5 text-slate-500">{configured ? '请检查 TCP 3493 可达性和 NUT Server 服务状态。' : '完成 USB 扫描并应用 Server 配置后，这里会显示实时数据。'}</p></div></div>
 }
 
-function PowerFailureAlert({ lowBattery, chargePercent, runtimeSeconds, policy }: { lowBattery: boolean; chargePercent: number | null; runtimeSeconds: number | null; policy: string }) {
+function PowerFailureAlert({ lowBattery, chargePercent, runtimeSeconds, runtimeCapped, policy }: { lowBattery: boolean; chargePercent: number | null; runtimeSeconds: number | null; runtimeCapped: boolean; policy: string }) {
   const tone = lowBattery
     ? 'border-rose-300 bg-rose-50 text-rose-900 shadow-[0_10px_30px_rgba(244,63,94,0.10)]'
     : 'border-amber-300 bg-amber-50 text-amber-950 shadow-[0_10px_30px_rgba(245,158,11,0.10)]'
@@ -157,7 +217,7 @@ function PowerFailureAlert({ lowBattery, chargePercent, runtimeSeconds, policy }
         </div>
         <div>
           <h2 className="text-base font-semibold">{lowBattery ? '电池电量低：关机保护即将触发' : '市电已断开：UPS 正在使用电池供电'}</h2>
-          <p className="mt-1.5 text-sm opacity-80">当前电量 {value(chargePercent, '%')}，预计续航 {runtime(runtimeSeconds)}。关机策略：{policy}。</p>
+          <p className="mt-1.5 text-sm opacity-80">当前电量 {value(chargePercent, '%')}，预计续航 {runtime(runtimeSeconds, runtimeCapped)}。关机策略：{policy}。</p>
           <p className="mt-2 text-xs opacity-65">状态每 5 秒刷新；恢复市电后，本地 NUT 会自动取消尚未到期的断电计时。</p>
         </div>
       </div>
@@ -171,8 +231,8 @@ function managementLabel(value?: string) { return ({ connected: '已连接', dis
 function serviceLabel(active?: boolean) { return active === undefined ? 'Unknown' : active ? '运行中' : '未运行' }
 function powerLabel(source: string) { return ({ mains: '市电供电', battery: '电池供电', bypass: '旁路供电', off: '输出关闭', other: '其它状态', unknown: '供电状态未知' } as Record<string, string>)[source] }
 function value(input: number | null, suffix: string) { return input === null ? '—' : `${Math.round(input)}${suffix}` }
-function runtime(seconds: number | null) { if (seconds === null) return '—'; const minutes = Math.round(seconds / 60); return minutes >= 60 ? `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分` : `${minutes} 分钟` }
-function watts(raw?: string) { const parsed = raw === undefined ? Number.NaN : Number(raw); return Number.isFinite(parsed) ? `${Math.round(parsed)} W` : '—' }
+function runtime(seconds: number | null, capped = false) { if (capped) return '设备未提供可靠估算'; if (seconds === null) return '—'; const minutes = Math.round(seconds / 60); return minutes >= 60 ? `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分` : `${minutes} 分钟` }
+function watts(raw?: string) { const parsed = raw === undefined ? Number.NaN : Number(raw); return Number.isFinite(parsed) ? `${Math.round(parsed)} W` : '设备未提供' }
 function dateTime(value: string) { return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(value)) }
 function shutdownPolicy(server: import('../lib/types.ts').NutServerRecord | null | undefined) {
   if (!server) return '尚未配置'

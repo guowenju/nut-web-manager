@@ -16,7 +16,16 @@ import type {
   ConfigPreview,
   BindingConfigPreview,
   DashboardSnapshot,
+  DashboardHistorySample,
   ShutdownOptions,
+  UpsMonitorConnectionTest,
+  UpsMonitorDevice,
+  UpsMonitorEvent,
+  UpsMonitorOverview,
+  UpsMonitorSample,
+  UpsMonitorSnapshot,
+  UpsMonitorSource,
+  UpsMonitorSourceInput,
 } from './types.ts'
 
 interface ErrorEnvelope {
@@ -67,6 +76,7 @@ export const sshPublicKeyQueryKey = ['ssh-public-key'] as const
 export const serversQueryKey = ['servers'] as const
 export const bindingsQueryKey = ['bindings'] as const
 export const dashboardQueryKey = ['dashboard'] as const
+export const upsMonitorQueryKey = ['ups-monitor'] as const
 
 export async function getSession(): Promise<Session | null> {
   try {
@@ -156,6 +166,46 @@ export function listServers() {
 
 export function getDashboard() {
   return apiRequest<DashboardSnapshot>('/dashboard')
+}
+
+export function getDashboardHistory(range: string) {
+  return apiRequest<DashboardHistorySample[]>(`/dashboard/history?range=${encodeURIComponent(range)}`)
+}
+
+export function getUpsMonitorOverview() {
+  return apiRequest<UpsMonitorOverview>('/ups-monitor/overview')
+}
+
+export function createUpsMonitorSource(input: UpsMonitorSourceInput) {
+  return apiRequest<UpsMonitorSource>('/ups-monitor/sources', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function updateUpsMonitorSource(id: string, input: UpsMonitorSourceInput) {
+  return apiRequest<UpsMonitorSource>(`/ups-monitor/sources/${id}`, { method: 'PUT', body: JSON.stringify(input) })
+}
+
+export function deleteUpsMonitorSource(id: string) {
+  return apiRequest<void>(`/ups-monitor/sources/${id}`, { method: 'DELETE' })
+}
+
+export function testUpsMonitorSource(id: string) {
+  return apiRequest<UpsMonitorConnectionTest>(`/ups-monitor/sources/${id}/test`, { method: 'POST' })
+}
+
+export function discoverUpsMonitorSource(id: string) {
+  return apiRequest<UpsMonitorDevice[]>(`/ups-monitor/sources/${id}/discover`, { method: 'POST' })
+}
+
+export function getUpsMonitorSnapshot(id: string) {
+  return apiRequest<UpsMonitorSnapshot>(`/ups-monitor/devices/${id}/snapshot`)
+}
+
+export function getUpsMonitorHistory(id: string, range: string) {
+  return apiRequest<UpsMonitorSample[]>(`/ups-monitor/devices/${id}/history?range=${encodeURIComponent(range)}`)
+}
+
+export function getUpsMonitorEvents(id: string) {
+  return apiRequest<UpsMonitorEvent[]>(`/ups-monitor/devices/${id}/events?limit=100`)
 }
 
 export function updateServerShutdown(serverId: string, input: ShutdownOptions) {

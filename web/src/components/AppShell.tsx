@@ -5,6 +5,7 @@ import {
   LogOut,
   Network,
   Server,
+  MonitorUp,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router'
@@ -17,6 +18,7 @@ interface AppShellProps {
 const navItems = [
   { to: '/', label: '概览', icon: LayoutDashboard, end: true },
   { to: '/hosts', label: '主机', icon: Server, end: false },
+  { to: '/ups-monitor', label: 'UPS 监控', icon: MonitorUp, end: false },
 ]
 
 export function AppShell({ children }: AppShellProps) {

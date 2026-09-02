@@ -1,5 +1,8 @@
 use anyhow::Context;
-use nwm::{app, config::Settings, persistence::Database, ssh::SshManager, state::AppState};
+use nwm::{
+    app, config::Settings, dashboard_telemetry, persistence::Database, ssh::SshManager,
+    state::AppState, ups_monitor,
+};
 use tokio::signal;
 use tracing::info;
 
@@ -48,11 +51,18 @@ async fn main() -> anyhow::Result<()> {
         .with_context(|| format!("failed to bind {}", settings.bind_address))?;
 
     let state = AppState::new(database.clone(), settings, ssh);
+    let collector = tokio::spawn(ups_monitor::run_collector(database.clone()));
+    let dashboard_collector = tokio::spawn(dashboard_telemetry::run_collector(database.clone()));
     info!(address = %state.settings.bind_address, "NUT Web Manager listening");
 
     let server_result = axum::serve(listener, app::router(state))
         .with_graceful_shutdown(shutdown_signal())
         .await;
+
+    collector.abort();
+    let _ = collector.await;
+    dashboard_collector.abort();
+    let _ = dashboard_collector.await;
 
     info!("closing database connection pool");
     database.close().await;

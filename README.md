@@ -4,6 +4,8 @@ NUT Web Manager 是一个面向家庭局域网的 NUT Web 管理平台，通过 
 
 它可以自动检测和安装 NUT、扫描 USB UPS、生成并应用 Server/Client 配置、设置自动关机策略，并在 Web 页面中展示 UPS 和保护链路状态。
 
+独立的“UPS 监控”模块还可以通过只读 NUT TCP 协议接入标准 NUT Server：支持多个数据源、自动发现 UPS、实时指标、90 天历史趋势、状态事件和完整原始变量展示。
+
 NWM 只负责管理配置，不参与实时掉电决策。配置完成后，即使 NWM 或 Docker 主机停止运行，各主机上的 NUT 和 `upsmon` 仍会独立执行掉电保护。
 
 ## 支持范围
@@ -14,6 +16,7 @@ NWM 只负责管理配置，不参与实时掉电决策。配置完成后，即�
 - 一台连接 USB UPS 的 NUT Server
 - 多台 NUT Client
 - NUT TCP 3493 局域网数据共享
+- 多个外部 NUT Server 的只读 UPS 监控
 
 > 当前只在`山特 TG-BOX 850`测试和使用
 
