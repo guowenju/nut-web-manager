@@ -184,7 +184,7 @@ impl MonitorRepository {
         reset_devices: bool,
     ) -> Result<Option<MonitorSource>, PersistenceError> {
         validate_source(name, address, port)?;
-        let mut transaction = self.pool.begin().await?;
+        let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let previous = sqlx::query("SELECT * FROM ups_monitor_sources WHERE id = ?")
             .bind(id)
             .fetch_optional(&mut *transaction)
@@ -280,7 +280,7 @@ impl MonitorRepository {
         discovered: &[DiscoveredUps],
     ) -> Result<Vec<MonitorDevice>, PersistenceError> {
         let now = timestamp(Utc::now());
-        let mut transaction = self.pool.begin().await?;
+        let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let names: HashSet<&str> = discovered
             .iter()
             .map(|device| device.name.as_str())
@@ -364,7 +364,7 @@ impl MonitorRepository {
         observed_at: DateTime<Utc>,
     ) -> Result<(), PersistenceError> {
         let now = timestamp(observed_at);
-        let mut transaction = self.pool.begin().await?;
+        let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let previous: Option<bool> =
             sqlx::query_scalar("SELECT online FROM ups_monitor_devices WHERE id = ?")
                 .bind(device_id)
@@ -401,7 +401,7 @@ impl MonitorRepository {
             .map_err(|error| PersistenceError::InvalidData(error.to_string()))?;
         let raw_json = serde_json::to_string(raw)
             .map_err(|error| PersistenceError::InvalidData(error.to_string()))?;
-        let mut transaction = self.pool.begin().await?;
+        let mut transaction = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let previous = sqlx::query(
             "SELECT d.online, s.enabled AS source_enabled, x.status_flags_json FROM ups_monitor_devices d JOIN ups_monitor_sources s ON s.id = d.source_id LEFT JOIN ups_monitor_snapshots x ON x.device_id = d.id WHERE d.id = ?",
         )
@@ -977,5 +977,52 @@ mod tests {
                 .device
                 .online
         );
+    }
+
+    #[tokio::test]
+    async fn collection_waits_for_an_existing_sqlite_writer() {
+        let database_path = std::env::temp_dir().join(format!(
+            "nwm-monitor-concurrency-{}.sqlite",
+            uuid::Uuid::new_v4()
+        ));
+        let database_url = format!("sqlite://{}", database_path.display());
+        let database = Database::connect(&database_url).await.unwrap();
+        database.migrate().await.unwrap();
+        let repo = database.monitor();
+        let source = repo
+            .create_source("NAS", "192.168.1.1", 3493, true)
+            .await
+            .unwrap();
+        let device = repo
+            .sync_discovery(
+                &source.id,
+                &[DiscoveredUps {
+                    name: "ups0".into(),
+                    description: None,
+                }],
+            )
+            .await
+            .unwrap()
+            .remove(0);
+
+        let blocker = database.pool.begin_with("BEGIN IMMEDIATE").await.unwrap();
+        let write = tokio::spawn({
+            let repo = repo.clone();
+            async move {
+                repo.record_success(
+                    &device.id,
+                    &BTreeMap::from([("ups.status".into(), "OL".into())]),
+                    Utc::now(),
+                )
+                .await
+            }
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        blocker.commit().await.unwrap();
+
+        write.await.unwrap().unwrap();
+        drop(repo);
+        database.close().await;
+        let _ = std::fs::remove_file(database_path);
     }
 }

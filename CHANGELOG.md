@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 修复多个后台采集器并发写入 SQLite 时可能频繁出现 `database is locked` 的问题。
+
 ## [0.2.0](https://github.com/guowenju/nut-web-manager/releases/tag/v0.2.0) - 2026-09-02
 
 ### Added
