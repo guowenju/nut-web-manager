@@ -26,6 +26,8 @@ import type {
   UpsMonitorSnapshot,
   UpsMonitorSource,
   UpsMonitorSourceInput,
+  AppSettings,
+  DefaultPage,
 } from './types.ts'
 
 interface ErrorEnvelope {
@@ -77,6 +79,7 @@ export const serversQueryKey = ['servers'] as const
 export const bindingsQueryKey = ['bindings'] as const
 export const dashboardQueryKey = ['dashboard'] as const
 export const upsMonitorQueryKey = ['ups-monitor'] as const
+export const settingsQueryKey = ['settings'] as const
 
 export async function getSession(): Promise<Session | null> {
   try {
@@ -98,6 +101,17 @@ export function login(input: { username: string; password: string }) {
 
 export function logout() {
   return apiRequest<Session>('/auth/logout', { method: 'POST' })
+}
+
+export function getSettings() {
+  return apiRequest<AppSettings>('/settings')
+}
+
+export function updateSettings(defaultPage: DefaultPage) {
+  return apiRequest<AppSettings>('/settings', {
+    method: 'PUT',
+    body: JSON.stringify({ default_page: defaultPage }),
+  })
 }
 
 export function listHosts() {

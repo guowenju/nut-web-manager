@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::{SESSION_COOKIE_NAME, SESSION_MAX_AGE},
+    persistence::DefaultPage,
     state::AppState,
 };
 
@@ -25,6 +26,7 @@ pub struct SessionResponse {
     authenticated: bool,
     username: String,
     default_credentials: bool,
+    default_page: DefaultPage,
 }
 
 pub async fn login(
@@ -49,7 +51,7 @@ pub async fn login(
         HeaderValue::from_str(&cookie).expect("generated session cookie must be valid"),
     );
 
-    Ok((headers, Json(session_response(&state))))
+    Ok((headers, Json(session_response(&state).await?)))
 }
 
 pub async fn logout(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
@@ -68,12 +70,13 @@ pub async fn logout(State(state): State<AppState>, headers: HeaderMap) -> impl I
             authenticated: false,
             username: state.settings.admin_username.clone(),
             default_credentials: state.settings.uses_default_admin_credentials(),
+            default_page: DefaultPage::Overview,
         }),
     )
 }
 
-pub async fn session(State(state): State<AppState>) -> Json<SessionResponse> {
-    Json(session_response(&state))
+pub async fn session(State(state): State<AppState>) -> Result<Json<SessionResponse>, ApiError> {
+    Ok(Json(session_response(&state).await?))
 }
 
 pub async fn require_session(
@@ -91,12 +94,13 @@ pub async fn require_session(
     next.run(request).await
 }
 
-fn session_response(state: &AppState) -> SessionResponse {
-    SessionResponse {
+async fn session_response(state: &AppState) -> Result<SessionResponse, ApiError> {
+    Ok(SessionResponse {
         authenticated: true,
         username: state.settings.admin_username.clone(),
         default_credentials: state.settings.uses_default_admin_credentials(),
-    }
+        default_page: state.database.settings().get().await?.default_page,
+    })
 }
 
 fn session_token(headers: &HeaderMap) -> Option<&str> {

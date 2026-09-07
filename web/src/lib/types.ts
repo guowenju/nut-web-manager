@@ -30,6 +30,13 @@ export interface Session {
   authenticated: boolean
   username: string
   default_credentials: boolean
+  default_page: DefaultPage
+}
+
+export type DefaultPage = 'overview' | 'ups_monitor'
+
+export interface AppSettings {
+  default_page: DefaultPage
 }
 
 export interface CreateHostInput {

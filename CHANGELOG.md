@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- 新增“设置”模块，支持为整个实例选择“概览”或“UPS 监控”作为登录及访问根地址时的默认页面。
+
 ## [0.2.1](https://github.com/guowenju/nut-web-manager/compare/v0.2.0...v0.2.1) - 2026-09-03
 
 ### Fixed

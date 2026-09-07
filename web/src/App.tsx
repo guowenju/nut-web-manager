@@ -16,6 +16,9 @@ const UpsMonitorPage = lazy(() =>
 const LoginPage = lazy(() =>
   import('./pages/LoginPage.tsx').then((module) => ({ default: module.LoginPage })),
 )
+const SettingsPage = lazy(() =>
+  import('./pages/SettingsPage.tsx').then((module) => ({ default: module.SettingsPage })),
+)
 
 function SessionGate() {
   const location = useLocation()
@@ -54,14 +57,27 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<SessionGate />}>
-          <Route index element={<DashboardPage />} />
+          <Route index element={<DefaultPageRedirect />} />
+          <Route path="overview" element={<DashboardPage />} />
           <Route path="hosts" element={<HostsPage />} />
           <Route path="ups-monitor" element={<UpsMonitorPage />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   )
+}
+
+function DefaultPageRedirect() {
+  const session = useQuery({
+    queryKey: sessionQueryKey,
+    queryFn: getSession,
+    retry: false,
+    staleTime: 30_000,
+  })
+
+  return <Navigate to={session.data?.default_page === 'ups_monitor' ? '/ups-monitor' : '/overview'} replace />
 }
 
 function PageLoading() {

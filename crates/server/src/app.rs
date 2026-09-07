@@ -13,6 +13,10 @@ pub fn router(state: AppState) -> Router {
     let authenticated = Router::new()
         .route("/api/v1/auth/session", get(api::session))
         .route("/api/v1/auth/logout", post(api::logout))
+        .route(
+            "/api/v1/settings",
+            get(api::get_settings).put(api::update_settings),
+        )
         .route("/api/v1/dashboard", get(api::dashboard))
         .route("/api/v1/dashboard/history", get(api::dashboard_history))
         .route(

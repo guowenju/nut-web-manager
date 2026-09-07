@@ -5,6 +5,7 @@ mod health;
 mod hosts;
 mod nut;
 mod operations;
+mod settings;
 mod ssh;
 mod topology;
 mod ups_monitor;
@@ -22,6 +23,7 @@ pub use nut::{
     scan_usb,
 };
 pub use operations::get as get_operation;
+pub use settings::{get as get_settings, update as update_settings};
 pub use ssh::{environment as host_environment, public_key as ssh_public_key};
 pub use ssh::{test as test_ssh, trust as trust_ssh};
 pub use topology::{
