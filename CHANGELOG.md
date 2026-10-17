@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- 登录页面右上角新增 GitHub 项目仓库链接，点击后在新标签页打开。
+- 登录页面右下角新增应用版本号显示，自动读取前端项目版本。
+
 ## [0.3.0](https://github.com/guowenju/nut-web-manager/compare/v0.2.1...v0.3.0) - 2026-09-07
 
 ### Added
