@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.3.1](https://github.com/guowenju/nut-web-manager/compare/v0.3.0...v0.3.1) - 2026-10-17
+
 ### Added
 
 - 登录页面右上角新增 GitHub 项目仓库链接，点击后在新标签页打开。
